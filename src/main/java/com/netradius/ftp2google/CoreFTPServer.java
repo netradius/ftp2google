@@ -139,12 +139,12 @@ public class CoreFTPServer extends FtpServerFactory {
 		class FtpFileWrapper implements FtpFile {
 
 			private final FtpFileWrapper parent;
-			private final GoogleDrive.GFile gfile;
+			private final GoogleFile gfile;
 
 			private String virtualName;
 			private FtpFileWrapper home;
 
-			public FtpFileWrapper(FtpFileWrapper parent, GoogleDrive.GFile ftpGFile, String virtualName) {
+			public FtpFileWrapper(FtpFileWrapper parent, GoogleFile ftpGFile, String virtualName) {
 				this.parent = parent;
 				this.gfile = ftpGFile;
 				this.virtualName = virtualName;
@@ -233,7 +233,7 @@ public class CoreFTPServer extends FtpServerFactory {
 				return gfile.isDirectory();
 			}
 
-			public GoogleDrive.GFile unwrap() {
+			public GoogleFile unwrap() {
 				return gfile;
 			}
 
@@ -333,7 +333,7 @@ public class CoreFTPServer extends FtpServerFactory {
 
 		private void initWorkingDirectory() {
 			if (currentDir == null) {
-				GoogleDrive.GFile root = new GoogleDrive.GFile();
+				GoogleFile root = new GoogleFile();
 				root.setId("root");
 				this.home = new FtpFileWrapper(null, root, "/");
 				this.currentDir = this.home;
@@ -437,17 +437,17 @@ public class CoreFTPServer extends FtpServerFactory {
 				com.google.api.services.drive.model.File fileByName1 = googleDrive.getGDriveFileByName(fileName);
 
 				if (fileByName1 != null) {
-					GoogleDrive.GFile fileByName = GoogleDrive.GFile.create(fileByName1);
+					GoogleFile fileByName = GoogleFile.create(fileByName1);
 					return createFtpFileWrapper(folder, fileByName, fileName, true);
 				}
 
-				return createFtpFileWrapper(folder, new GoogleDrive.GFile(Collections.singleton(folder.getId()), fileName), fileName, false);
+				return createFtpFileWrapper(folder, new GoogleFile(Collections.singleton(folder.getId()), fileName), fileName, false);
 			} catch (Exception e) {
-				return createFtpFileWrapper(folder, new GoogleDrive.GFile(Collections.singleton(folder.getId()), fileName), fileName, false);
+				return createFtpFileWrapper(folder, new GoogleFile(Collections.singleton(folder.getId()), fileName), fileName, false);
 			}
 		}
 
-		private FtpFileWrapper createFtpFileWrapper(FtpFileWrapper folder, GoogleDrive.GFile gFile, String filename, boolean exists) {
+		private FtpFileWrapper createFtpFileWrapper(FtpFileWrapper folder, GoogleFile gFile, String filename, boolean exists) {
 
 			String absolutePath = folder == null ? filename : folder.isRoot() ? FILE_SEPARATOR + filename : folder.getAbsolutePath()
 					+ FILE_SEPARATOR + filename;

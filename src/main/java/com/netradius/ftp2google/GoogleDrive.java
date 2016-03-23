@@ -18,12 +18,11 @@ import com.google.api.client.util.store.DataStoreFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
-import com.google.api.services.drive.model.*;
 import com.google.api.services.drive.model.File;
+import com.google.api.services.drive.model.ParentReference;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import java.io.*;
 import java.net.URL;
@@ -31,314 +30,21 @@ import java.util.*;
 
 /**
  * @author Dilip Sisodia
+ * @author Erik Jensen
  */
-
+@Slf4j
 public class GoogleDrive {
-	private static final Log LOG = LogFactory.getLog(GFile.class);
 
+	private GoogleClientSecrets secrets;
 	private JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
 	private HttpTransport httpTransport;
 	private Credential credential;
 	private Drive drive;
 	private DataStoreFactory dataStoreFactory;
 
-	public static class GFile implements Serializable, Cloneable {
+	public GoogleDrive(GoogleClientSecrets secrets, Properties configuration) {
 
-		public static enum MIME_TYPE {
-
-			GOOGLE_AUDIO("application/vnd.google-apps.audio", "audio"), GOOGLE_DOC("application/vnd.google-apps.document", "Google Docs"), GOOGLE_DRAW(
-					"application/vnd.google-apps.drawing", "Google Drawing"), GOOGLE_FILE("application/vnd.google-apps.file",
-					"Google  Drive file"), GOOGLE_FOLDER("application/vnd.google-apps.folder", "Google  Drive folder"), GOOGLE_FORM(
-					"application/vnd.google-apps.form", "Google  Forms"), GOOGLE_FUSION("application/vnd.google-apps.fusiontable",
-					"Google  Fusion Tables"), GOOGLE_PHOTO("application/vnd.google-apps.photo", "photo"), GOOGLE_SLIDE(
-					"application/vnd.google-apps.presentation", "Google  Slides"), GOOGLE_PPT("application/vnd.google-apps.script",
-					"Google  Apps Scripts"), GOOGLE_SITE("application/vnd.google-apps.sites", "Google  Sites"), GOOGLE_SHEET(
-					"application/vnd.google-apps.spreadsheet", "Google  Sheets"), GOOGLE_UNKNOWN("application/vnd.google-apps.unknown",
-					"unknown"), GOOGLE_VIDEO("application/vnd.google-apps.video", "video");
-
-			private final String value;
-			private final String desc;
-			static Map<String, String> list = new HashMap<String,String>();
-
-			MIME_TYPE(String value, String desc) {
-				this.value = value;
-				this.desc = desc;
-			}
-
-			public String getValue() {
-				return value;
-			}
-
-			public String getDesc() {
-				return desc;
-			}
-
-			public static MIME_TYPE parse(String mimeType) {
-				for (MIME_TYPE a : MIME_TYPE.values()) {
-					if (a.getValue().equals(mimeType)) {
-						return a;
-					}
-				}
-				return null;
-			}
-		};
-
-		private static final long serialVersionUID = 1L;
-
-		private String id;
-		private long revision;
-		private Set<String> labels;
-		private String name;
-		private boolean isDirectory;
-		private long size;
-		private String md5Checksum;
-		private long lastModified;
-
-		private String mimeType;
-		private Set<String> parents;
-
-		private transient java.io.File transferFile = null;
-
-		private transient URL downloadUrl;
-		private long lastViewedByMeDate;
-
-		private transient GFile currentParent;
-
-		private boolean exists;
-
-		public GFile() {
-			this("");
-		}
-
-		public GFile(String name) {
-			this.name = name;
-		}
-
-		public Set<String> getParents() {
-			return parents;
-		}
-
-		public void setParents(Set<String> parents) {
-			this.parents = parents;
-		}
-
-		public GFile(Set<String> parents, String name) {
-			this(name);
-			this.parents = parents;
-		}
-
-		public void setId(String id) {
-			this.id = id;
-		}
-
-		public String getId() {
-			return id;
-		}
-
-		public void setName(String name) {
-			this.name = name;
-		}
-
-		public void setRevision(long largestChangeId) {
-			this.revision = largestChangeId;
-		}
-
-		public void setLength(long length) {
-			this.setSize(length);
-		}
-
-		public void setDirectory(boolean isDirectory) {
-			this.isDirectory = isDirectory;
-		}
-
-		public boolean isDirectory() {
-			return isDirectory;
-		}
-
-		public String getMd5Checksum() {
-			return md5Checksum;
-		}
-
-		public void setMd5Checksum(String md5Checksum) {
-			this.md5Checksum = md5Checksum;
-		}
-
-		public Set<String> getLabels() {
-			return labels;
-		}
-
-		public void setLabels(Set<String> labels) {
-			this.labels = labels;
-		}
-
-		public void setLastModified(long time) {
-			this.lastModified = time;
-		}
-
-		public String getName() {
-			return name;
-		}
-
-		public long getLength() {
-			return getSize();
-		}
-
-		public long getLastModified() {
-			return lastModified;
-		}
-
-		public void setMimeType(String mimeType) {
-			this.mimeType = mimeType;
-		}
-
-		public long getRevision() {
-			return revision;
-		}
-
-		public String toString() {
-			return getName() + "(" + getId() + ")";
-		}
-
-		public void setDownloadUrl(URL downloadUrl) {
-			this.downloadUrl = downloadUrl;
-		}
-
-		public URL getDownloadUrl() {
-			return downloadUrl;
-		}
-
-		public java.io.File getTransferFile() {
-			return transferFile;
-		}
-
-		public void setTransferFile(java.io.File transferFile) {
-			this.transferFile = transferFile;
-		}
-
-		public long getLastViewedByMeDate() {
-			return lastViewedByMeDate;
-		}
-
-		public void setLastViewedByMeDate(long lastViewedByMeDate) {
-			this.lastViewedByMeDate = lastViewedByMeDate;
-		}
-
-		@Override
-		public Object clone() {
-			GFile ret = new GFile(getName());
-			ret.setId(getId());
-			ret.setName(getName());
-			ret.setDirectory(isDirectory());
-			ret.setLength(getLength());
-			ret.setLastModified(getLastModified());
-			ret.setMd5Checksum(getMd5Checksum());
-			ret.setRevision(getRevision());
-			ret.setParents(getParents());
-
-			ret.setMimeType(mimeType);
-			ret.setExists(isExists());
-			ret.setLastViewedByMeDate(getLastViewedByMeDate());
-			return ret;
-		}
-
-		public GFile getCurrentParent() {
-			return currentParent;
-		}
-
-		public void setCurrentParent(GFile currentParent) {
-			this.currentParent = currentParent;
-		}
-
-		public boolean isExists() {
-			return exists;
-		}
-
-		public void setExists(boolean exists) {
-			this.exists = exists;
-		}
-
-		public long getSize() {
-			return size;
-		}
-
-		public void setSize(long size) {
-			this.size = size;
-		}
-
-		public static GFile create(File googleFile) {
-			if (googleFile == null)
-				return null;
-			GFile newFile = new GFile(getFilename(googleFile));
-			newFile.setId(googleFile.getId());
-			newFile.setLastModified(getLastModified(googleFile));
-			newFile.setLength(getFileSize(googleFile));
-			newFile.setDirectory(isDirectory(googleFile));
-			newFile.setMd5Checksum(googleFile.getMd5Checksum());
-			newFile.setParents(new HashSet<String>());
-			newFile.setExists(true);
-			for (ParentReference ref : googleFile.getParents()) {
-				if (ref.getIsRoot()) {
-					newFile.getParents().add("root");
-				} else {
-					newFile.getParents().add(ref.getId());
-				}
-			}
-			if (googleFile.getLabels().getTrashed()) {
-				newFile.setLabels(Collections.singleton("trashed"));
-			} else {
-				newFile.setLabels(Collections.<String> emptySet());
-			}
-			if (googleFile.getLastViewedByMeDate() != null) {
-				newFile.setLastViewedByMeDate(googleFile.getLastViewedByMeDate().getValue());
-			}
-			return newFile;
-		}
-
-		public static List<GFile> create(List<File> googleFiles, long revision) {
-			List<GFile> ret = new ArrayList<GFile>(googleFiles.size());
-			for (File child : googleFiles) {
-				GFile localFile = create(child);
-				localFile.setRevision(revision);
-				ret.add(localFile);
-			}
-			return ret;
-		}
-
-		private static String getFilename(File file) {
-			String filename = file.getTitle() != null ? file.getTitle() : file.getOriginalFilename();
-			return filename;
-		}
-
-		private static boolean isDirectory(File googleFile) {
-			boolean isDirectory = "application/vnd.google-apps.folder".equals(googleFile.getMimeType());
-			return isDirectory;
-		}
-
-		private static long getLastModified(File googleFile) {
-			final boolean b = googleFile != null && googleFile.getModifiedDate() != null;
-			if (b) {
-				return googleFile.getModifiedDate().getValue();
-			} else {
-				return 0;
-			}
-
-		}
-
-		private static long getFileSize(File googleFile) {
-			return googleFile.getFileSize() == null ? 0 : googleFile.getFileSize();
-		}
-
-		public boolean isRemovable() {
-			return !"root".equals(getId());
-		}
-
-		public String getOwnerName() {
-			return "netradius";
-		}
-
-	}
-
-	public GoogleDrive(Properties configuration) {
+		this.secrets = secrets;
 
 		java.io.File DATA_STORE_DIR = new java.io.File("data/google/" + configuration.getProperty("account", "default"));
 
@@ -362,17 +68,11 @@ public class GoogleDrive {
 	}
 
 	private Credential authorize() throws Exception {
-		GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(jsonFactory,
-				new InputStreamReader(File.class.getResourceAsStream("/client_secrets.json")));
-		if (clientSecrets.getDetails().getClientId().startsWith("Enter")
-				|| clientSecrets.getDetails().getClientSecret().startsWith("Enter ")) {
-			System.exit(1);
-		}
 		Set<String> scopes = new HashSet<String>();
 		scopes.add(DriveScopes.DRIVE);
 		scopes.add(DriveScopes.DRIVE_METADATA);
 
-		GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(httpTransport, jsonFactory, clientSecrets, scopes)
+		GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(httpTransport, jsonFactory, secrets, scopes)
 				.setDataStoreFactory(dataStoreFactory).build();
 		return new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize("user");
 	}
@@ -392,7 +92,7 @@ public class GoogleDrive {
 	}
 
 
-	void getFileDownloadURL(GFile file) {
+	void getFileDownloadURL(GoogleFile file) {
 		try {
 			File googleFile = getFile(file.getId());
 			switch (googleFile.getMimeType()) {
@@ -417,7 +117,7 @@ public class GoogleDrive {
 		}
 	}
 
-	java.io.File downloadFile(GFile file) {
+	java.io.File downloadFile(GoogleFile file) {
 		java.io.File ret = null;
 		InputStream is = null;
 		java.io.File tmpFile = null;
@@ -462,7 +162,7 @@ public class GoogleDrive {
 	}
 
 
-	public File uploadFile(GFile fileToUpload ) {
+	public File uploadFile(GoogleFile fileToUpload ) {
 		try {
 			File file = null;
 
@@ -503,7 +203,7 @@ public class GoogleDrive {
 	}
 
 
-	public InputStream createInputStream(GFile file) {
+	public InputStream createInputStream(GoogleFile file) {
 		java.io.File transferFile = downloadFile(file);
 		if (transferFile == null) {
 			throw new IllegalStateException("File does not exists.");
@@ -518,21 +218,21 @@ public class GoogleDrive {
 
 	}
 
-	public OutputStream createOutputStream(final GFile fTPGFileW) {
-		final GFile fTPGFile = fTPGFileW;
+	public OutputStream createOutputStream(final GoogleFile fTPGoogleFileW) {
+		final GoogleFile fTPGoogleFile = fTPGoogleFileW;
 		OutputStream transferFileOutputStream;
 		try {
-			final java.io.File transferFile = java.io.File.createTempFile("gdrive-synch-", ".upload." + fTPGFile.getName());
-			fTPGFile.setTransferFile(transferFile);
+			final java.io.File transferFile = java.io.File.createTempFile("gdrive-synch-", ".upload." + fTPGoogleFile.getName());
+			fTPGoogleFile.setTransferFile(transferFile);
 			transferFileOutputStream = new FileOutputStream(transferFile) {
 				@Override
 				public void close() throws IOException {
 					com.google.api.services.drive.model.File updatedGoogleFile = null;
 					super.close();
 					try {
-							updatedGoogleFile = uploadFile(fTPGFile);
+							updatedGoogleFile = uploadFile(fTPGoogleFile);
 					} finally {
-						FileUtils.deleteQuietly(fTPGFile.getTransferFile());
+						FileUtils.deleteQuietly(fTPGoogleFile.getTransferFile());
 					}
 				}
 			};
