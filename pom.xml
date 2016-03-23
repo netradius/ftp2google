@@ -6,12 +6,20 @@
 
 	<groupId>com.netradius.ftp2google</groupId>
 	<artifactId>ftp2google</artifactId>
-	<version>1.0-SNAPSHOT</version>
+	<version>1.0.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
-	<name>Netradius FTP2Google</name>
+	<name>NetRadius ftp2google</name>
 
 	<properties>
+		<!-- Build Settings -->
 		<java.version>1.8</java.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+		<!-- Plugin Versions -->
+		<maven-compiler-plugin.version>2.3.2</maven-compiler-plugin.version>
+
+
+		<!-- Dependency Versions -->
 		<slf4j.version>1.5.6</slf4j.version>
 		<ftpserver-core.version>1.0.6</ftpserver-core.version>
 		<ftplet-api.version>1.0.6</ftplet-api.version>
@@ -22,8 +30,6 @@
 		<oath-client-jetty.version>1.20.0</oath-client-jetty.version>
 		<ftpserver-core.version>1.0.6</ftpserver-core.version>
 		<commons-net.version>2.0</commons-net.version>
-
-
 	</properties>
 
 	<dependencies>
@@ -90,7 +96,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>2.3.2</version>
+				<version>${maven-compiler-plugin.version}</version>
 				<configuration>
 					<source>${java.version}</source>
 					<target>${java.version}</target>
