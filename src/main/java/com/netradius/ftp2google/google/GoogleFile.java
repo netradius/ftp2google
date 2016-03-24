@@ -1,4 +1,4 @@
-package com.netradius.ftp2google;
+package com.netradius.ftp2google.google;
 
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.ParentReference;
@@ -53,14 +53,6 @@ public class GoogleFile implements Serializable, Cloneable {
 
 	public void setLastViewedByMeDate(long lastViewedByMeDate) {
 		this.lastViewedByMeDate = lastViewedByMeDate;
-	}
-
-	public boolean isRemovable() {
-		return !"root".equals(getId());
-	}
-
-	public String getOwnerName() {
-		return "netradius";
 	}
 
 	@Override
@@ -141,6 +133,14 @@ public class GoogleFile implements Serializable, Cloneable {
 
 	private static long getFileSize(File googleFile) {
 		return googleFile.getFileSize() == null ? 0 : googleFile.getFileSize();
+	}
+
+	public boolean isRemovable() {
+		return !"root".equals(getId());
+	}
+
+	public String getOwnerName() {
+		return "netradius";
 	}
 
 }

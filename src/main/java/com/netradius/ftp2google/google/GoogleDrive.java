@@ -1,4 +1,4 @@
-package com.netradius.ftp2google;
+package com.netradius.ftp2google.google;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
@@ -147,7 +147,7 @@ public class GoogleDrive {
 		return ret;
 	}
 
-	File getGDriveFileByName(String searchFileName) {
+	public File getGDriveFileByName(String searchFileName) {
 		try {
 			List<File> files = drive.files().list().execute().getItems();
 			for (File file: files) {

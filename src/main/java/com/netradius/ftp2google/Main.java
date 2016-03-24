@@ -1,14 +1,18 @@
 package com.netradius.ftp2google;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
-import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import com.netradius.ftp2google.ftp.FTPServer;
+import com.netradius.ftp2google.google.GoogleDrive;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.*;
 import org.apache.ftpserver.FtpServer;
 import org.apache.ftpserver.ftplet.FtpException;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.Properties;
 
@@ -86,52 +90,24 @@ public class Main {
 		Properties config = readProperties(configLoc);
 		GoogleClientSecrets secrets = readSecrets(secretsLoc);
 
-
-		try {
-			GoogleDrive drive = new GoogleDrive(secrets, config);
-			CoreFTPServer coreFTPServer = new CoreFTPServer(drive, config);
-			coreFTPServer.initFTPServer(config);
-			server = coreFTPServer.createServer();
-			registerShutdownHook();
-			server.start();
-		} catch (Exception ex) {
-			log.warn(ex.getMessage());
-		}
-	}
-
-	private static void stop() {
-		server.stop();
+		GoogleDrive drive = new GoogleDrive(secrets, config);
+		FTPServer coreFTPServer = new FTPServer(drive, config);
+		coreFTPServer.initFTPServer(config);
+		server = coreFTPServer.createServer();
+		registerShutdownHook();
+		log.info("Starting server...");
+		server.start();
+		log.info("Server started");
 	}
 
 	private static void registerShutdownHook() {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
-				log.info("Shuting down...");
-				Main.stop();
+				log.info("Shutting down server...");
+				server.stop();
 				log.info("Good bye!");
 			}
 		});
 	}
-
-
-
-	static Properties readCommandLinePropertiesFile(String propertiesFilename) {
-		Properties properties = new Properties();
-		FileInputStream inStream = null;
-		try {
-			inStream = new FileInputStream(propertiesFilename);
-			properties.load(inStream);
-		} catch (Exception ex) {
-		} finally {
-			if (inStream != null) {
-				try {
-					inStream.close();
-				} catch (Exception ex) {
-				}
-			}
-		}
-		return properties;
-	}
-
 }
